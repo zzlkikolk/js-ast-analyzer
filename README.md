@@ -50,6 +50,67 @@ node index.js decrypt api.send this.request
 
 如果分析的文件经过压缩，位置通常会显示为第 `1` 行和较大的列号。
 
+## 根据 URL 查请求方法和调用链
+
+如果你只知道接口地址，例如 `/article_game/role`，使用 `--url`：
+
+```bash
+node index.js --url /article_game/role
+```
+
+脚本会：
+
+- 匹配 `Server.get`、`Server.post`、`Server.postJSON`、`Site.http.get`、`Site.http.post` 的第一个参数；
+- 找到包含该 URL 的请求调用；
+- 输出请求所在函数；
+- 继续反向查找哪些函数调用了这个请求函数；
+- 对 Vue render 里常见的事件绑定引用输出“可能入口引用”。
+
+示例输出：
+
+```text
+URL 查询: /article_game/role
+
+1. 请求: Server.get (7:25249)
+  URL 参数: `article_game/role/${e}`
+  所在函数: U (7:25222, module 61717)
+  函数片段: function U(e,t,i,s){return Server.get(...)}
+  调用链:
+    1. getMyRole (7:28618, module 61717) -> U (7:25222, module 61717)
+       调用点: U(this.product.id,t,null,this.roleid)
+```
+
+如果请求写在 `setTimeout`、`then` 等匿名回调里，输出会额外显示外层命名方法，方便还原业务入口。
+
+## 根据函数名查调用链
+
+如果你已经知道请求封装函数，例如：
+
+```js
+function U(e, t, i, s) {
+    return Server.get(`article_game/role/${e}`, {
+        role_id: s,
+        server_id: t?.server_id || "",
+        server_name: t?.server_name || "",
+        user_id: i || ""
+    }).then(e => e);
+}
+```
+
+可以直接查它的上游调用者：
+
+```bash
+node index.js --chain U
+```
+
+打包文件里可能存在多个同名短函数。脚本会使用 Babel scope/binding 尽量区分同名函数，避免把其它模块里的 `U()` 当成同一个函数。
+
+默认最多向上追踪 6 层，可以通过 `--depth` 调整：
+
+```bash
+node index.js --chain U --depth 10
+```
+
 ## 可识别的调用
 
 | 源码 | 匹配名称 |
@@ -67,8 +128,9 @@ node index.js decrypt api.send this.request
 - 动态属性调用：`api[method](data)`
 - 函数别名：`const send = api.send; send(data)`
 - 运行时生成或修改的函数引用
+- 复杂运行时分发：事件总线、字符串拼接出的函数名、框架内部动态调用
 
-要处理这些场景，需要进一步基于 Babel scope/binding API 追踪变量绑定和数据流。
+当前脚本已经处理了常见 webpack 导出调用，例如 `var c = i(11667)` 和 `(0, c.wO)(...)`。更复杂的跨模块数据流仍需要继续补充专项规则。
 
 ## 项目结构
 
