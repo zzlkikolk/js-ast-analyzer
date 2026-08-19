@@ -134,6 +134,65 @@ node index.js --file roblox/roblox-login.js --chain login
 node index.js --chain U --depth 10
 ```
 
+## 追踪字段来源
+
+`field-source.js` 用于反向追踪某个对象字段写入时的值来源，适合分析请求参数、challenge metadata、token 等字段的静态传递路径。
+
+例如，查找 `sessionID` 被写入请求参数时的来源：
+
+```bash
+node field-source.js --file roblox/Challenge.js --field sessionID
+```
+
+压缩包通常有多个同名字段。可以用 `--function` 缩小到一个函数：
+
+```bash
+node field-source.js --file roblox/Challenge.js --field sessionID --function tZ
+```
+
+支持的选项：
+
+```bash
+node field-source.js \
+  --file roblox/Challenge.js \
+  --field sessionID \
+  --function tZ \
+  --depth 10 \
+  --limit 10
+```
+
+- `--field`：必填，目标对象字段名，例如 `sessionID`、`challengeMetadata`。
+- `--function`：可选，只报告该函数内的字段写入。
+- `--depth`：可选，最大回溯层数，默认 `8`。
+- `--limit`：可选，最多输出的写入位置数，默认 `20`。
+
+脚本会识别并输出以下静态链路：
+
+- 对象字段值和成员属性赋值；
+- 变量初始化和后续 `=` 赋值；
+- 函数参数到可静态识别的直接调用实参；
+- 对象字面量字段和对象展开；
+- `JSON.parse`、`atob`、`decodeURIComponent` 等透明转换的输入；
+- 成员读取，例如 `challengeMetadata.sessionId`。
+
+例如测试 fixture：
+
+```bash
+node field-source.js --file test/field-source-fixture.js --field sessionID
+```
+
+会输出类似的来源链：
+
+```text
+sessionID: sessionId
+-> 参数 sessionId
+-> getPuzzle(challengeMetadata.sessionId)
+-> challengeMetadata.sessionId
+-> JSON.parse(responseHeaders["rblx-challenge-metadata"])
+```
+
+这仍是静态分析，不执行目标代码。模块导出后的成员调用、动态属性、运行时反射、事件总线，以及 React/Vue 的 props、context、state 跨组件传递，可能无法自动解析到最终来源；输出会明确标记为未解析的成员访问或框架状态传递。
+
 ## 可识别的调用
 
 | 源码 | 匹配名称 |
@@ -164,6 +223,9 @@ node index.js --chain U --depth 10
 ├── roblox/
 │   └── roblox-login.js
 ├── index.js         # AST 解析、遍历和调用匹配逻辑
+├── field-source.js  # 字段来源追踪
+└── test/
+    └── field-source.test.js
 ├── package.json
 └── README.md
 ```
