@@ -6,7 +6,14 @@ import traverseModule from "@babel/traverse";
 const traverse = traverseModule.default;
 
 const options = parseArgs(process.argv.slice(2));
-const inputFile = path.resolve(options.inputFile || "./igamebuy-js/4306.js");
+
+if (!options.inputFile) {
+    console.error("缺少 --file 参数。");
+    console.error("示例: node index.js --file roblox/Challenge.js");
+    process.exit(1);
+}
+
+const inputFile = path.resolve(options.inputFile);
 const code = readInputFile(inputFile);
 
 // JS -> AST

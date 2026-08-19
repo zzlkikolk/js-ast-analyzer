@@ -17,33 +17,28 @@ npm install
 
 ## 指定分析文件
 
-默认入口会读取 `igamebuy-js/4306.js`：
-
-```js
-const code = fs.readFileSync("./igamebuy-js/4306.js", "utf8");
-```
-
-使用 `--file` 可以分析任意 JavaScript 文件，无需修改源码。路径支持相对路径和绝对路径：
+两个分析脚本都要求通过 `--file` 指定目标 JavaScript 文件，不再内置默认分析文件。路径支持相对路径和绝对路径：
 
 ```bash
 node index.js --file roblox/roblox-login.js
+node field-source.js --file roblox/Challenge.js --field sessionID
 node index.js --file /absolute/path/to/script.js
 ```
 
 ## 运行
 
-不传参数时，输出所有可静态识别的函数调用：
+输出指定文件中所有可静态识别的函数调用：
 
 ```bash
-node index.js
+node index.js --file roblox/Challenge.js
 ```
 
 传入一个或多个函数名时，只输出精确匹配的调用：
 
 ```bash
-node index.js decrypt
-node index.js api.send
-node index.js decrypt api.send this.request
+node index.js --file roblox/Challenge.js decrypt
+node index.js --file roblox/Challenge.js api.send
+node index.js --file roblox/Challenge.js decrypt api.send this.request
 ```
 
 `--file` 可与函数名筛选组合：
@@ -63,10 +58,10 @@ node index.js --file roblox/roblox-login.js fetch login
 
 ## 根据 URL 查请求方法和调用链
 
-如果你只知道接口地址，例如 `/article_game/role`，使用 `--url`：
+如果你只知道接口地址，例如 `/proof-of-work-service/v1/pow-puzzle`，使用 `--url`：
 
 ```bash
-node index.js --url /article_game/role
+node index.js --file roblox/Challenge.js --url /proof-of-work-service/v1/pow-puzzle
 ```
 
 分析其他文件中的 URL 时，在 `--url` 前后传入 `--file` 均可：
@@ -86,10 +81,10 @@ node index.js --file roblox/roblox-login.js --url /login
 示例输出：
 
 ```text
-URL 查询: /article_game/role
+URL 查询: /proof-of-work-service/v1/pow-puzzle
 
 1. 请求: Server.get (7:25249)
-  URL 参数: `article_game/role/${e}`
+  URL 参数: `/proof-of-work-service/v1/pow-puzzle`
   所在函数: U (7:25222, module 61717)
   函数片段: function U(e,t,i,s){return Server.get(...)}
   调用链:
@@ -101,23 +96,10 @@ URL 查询: /article_game/role
 
 ## 根据函数名查调用链
 
-如果你已经知道请求封装函数，例如：
-
-```js
-function U(e, t, i, s) {
-    return Server.get(`article_game/role/${e}`, {
-        role_id: s,
-        server_id: t?.server_id || "",
-        server_name: t?.server_name || "",
-        user_id: i || ""
-    }).then(e => e);
-}
-```
-
-可以直接查它的上游调用者：
+如果已经知道请求封装函数名，例如 `U`，可以直接查它的上游调用者：
 
 ```bash
-node index.js --chain U
+node index.js --file roblox/Challenge.js --chain U
 ```
 
 也可以在指定文件中查询函数调用链：
@@ -131,7 +113,7 @@ node index.js --file roblox/roblox-login.js --chain login
 默认最多向上追踪 6 层，可以通过 `--depth` 调整：
 
 ```bash
-node index.js --chain U --depth 10
+node index.js --file roblox/Challenge.js --chain U --depth 10
 ```
 
 ## 追踪字段来源
@@ -161,6 +143,7 @@ node field-source.js \
   --limit 10
 ```
 
+- `--file`：必填，要分析的 JavaScript 文件。
 - `--field`：必填，目标对象字段名，例如 `sessionID`、`challengeMetadata`。
 - `--function`：可选，只报告该函数内的字段写入。
 - `--depth`：可选，最大回溯层数，默认 `8`。
@@ -218,13 +201,15 @@ sessionID: sessionId
 
 ```text
 .
-├── igamebuy-js/
-│   └── 4306.js      # 默认分析目标
 ├── roblox/
+│   ├── Challenge.js
+│   ├── CoreUtilities.js
+│   ├── captcha.js
 │   └── roblox-login.js
 ├── index.js         # AST 解析、遍历和调用匹配逻辑
 ├── field-source.js  # 字段来源追踪
-└── test/
+├── test/
+    ├── cli-options.test.js
     └── field-source.test.js
 ├── package.json
 └── README.md

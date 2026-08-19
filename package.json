@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node test/field-source.test.js"
+    "test": "node test/field-source.test.js && node test/cli-options.test.js"
   },
   "keywords": [],
   "author": "",

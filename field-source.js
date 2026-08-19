@@ -20,7 +20,13 @@ if (!options.field) {
     process.exit(1);
 }
 
-const inputFile = path.resolve(options.inputFile || "./igamebuy-js/4306.js");
+if (!options.inputFile) {
+    console.error("缺少 --file 参数。");
+    printHelp();
+    process.exit(1);
+}
+
+const inputFile = path.resolve(options.inputFile);
 const code = readInputFile(inputFile);
 const ast = parseSource(code, inputFile);
 
@@ -84,6 +90,8 @@ function printHelp() {
   node field-source.js --file <文件> --field <字段名> [选项]
 
 选项:
+  --file <文件>        必填，要分析的 JavaScript 文件
+  --field <字段名>     必填，要追踪的对象字段名
   --function <函数名>  只分析指定函数内的字段写入
   --depth <层数>       最大回溯层数，默认 8
   --limit <数量>       最多输出多少个字段写入，默认 20
