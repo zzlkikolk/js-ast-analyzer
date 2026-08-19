@@ -23,7 +23,12 @@ npm install
 const code = fs.readFileSync("./igamebuy-js/4306.js", "utf8");
 ```
 
-分析其他文件时，将该路径改为目标 JavaScript 文件的相对路径或绝对路径。
+使用 `--file` 可以分析任意 JavaScript 文件，无需修改源码。路径支持相对路径和绝对路径：
+
+```bash
+node index.js --file roblox/roblox-login.js
+node index.js --file /absolute/path/to/script.js
+```
 
 ## 运行
 
@@ -41,6 +46,12 @@ node index.js api.send
 node index.js decrypt api.send this.request
 ```
 
+`--file` 可与函数名筛选组合：
+
+```bash
+node index.js --file roblox/roblox-login.js fetch login
+```
+
 输出包含调用名称、源码位置和原始调用片段：
 
 ```text
@@ -56,6 +67,12 @@ node index.js decrypt api.send this.request
 
 ```bash
 node index.js --url /article_game/role
+```
+
+分析其他文件中的 URL 时，在 `--url` 前后传入 `--file` 均可：
+
+```bash
+node index.js --file roblox/roblox-login.js --url /login
 ```
 
 脚本会：
@@ -103,6 +120,12 @@ function U(e, t, i, s) {
 node index.js --chain U
 ```
 
+也可以在指定文件中查询函数调用链：
+
+```bash
+node index.js --file roblox/roblox-login.js --chain login
+```
+
 打包文件里可能存在多个同名短函数。脚本会使用 Babel scope/binding 尽量区分同名函数，避免把其它模块里的 `U()` 当成同一个函数。
 
 默认最多向上追踪 6 层，可以通过 `--depth` 调整：
@@ -138,6 +161,8 @@ node index.js --chain U --depth 10
 .
 ├── igamebuy-js/
 │   └── 4306.js      # 默认分析目标
+├── roblox/
+│   └── roblox-login.js
 ├── index.js         # AST 解析、遍历和调用匹配逻辑
 ├── package.json
 └── README.md

@@ -1,17 +1,16 @@
 import fs from "node:fs";
+import path from "node:path";
 import * as parser from "@babel/parser";
 import traverseModule from "@babel/traverse";
 
 const traverse = traverseModule.default;
 
-const code = fs.readFileSync("./igamebuy-js/4306.js", "utf8");
-
 const options = parseArgs(process.argv.slice(2));
+const inputFile = path.resolve(options.inputFile || "./igamebuy-js/4306.js");
+const code = readInputFile(inputFile);
 
 // JS -> AST
-const ast = parser.parse(code, {
-    sourceType: "unambiguous"
-});
+const ast = parseSource(code, inputFile);
 
 const functionInfosByNode = new Map();
 const functionInfosByName = new Map();
@@ -79,6 +78,7 @@ function parseArgs(args) {
         targetCallees: new Set(),
         targetUrl: null,
         chainTarget: null,
+        inputFile: null,
         maxDepth: 6
     };
 
@@ -100,10 +100,37 @@ function parseArgs(args) {
             continue;
         }
 
+        if (arg === "--file") {
+            result.inputFile = args[++i] || "";
+            continue;
+        }
+
         result.targetCallees.add(arg);
     }
 
     return result;
+}
+
+function readInputFile(filePath) {
+    try {
+        return fs.readFileSync(filePath, "utf8");
+    } catch (error) {
+        console.error(`无法读取 JavaScript 文件: ${filePath}`);
+        console.error(error.message);
+        process.exit(1);
+    }
+}
+
+function parseSource(source, filePath) {
+    try {
+        return parser.parse(source, {
+            sourceType: "unambiguous"
+        });
+    } catch (error) {
+        console.error(`无法解析 JavaScript 文件: ${filePath}`);
+        console.error(error.message);
+        process.exit(1);
+    }
 }
 
 function escapeRegExp(value) {
